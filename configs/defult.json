@@ -1,0 +1,48 @@
+{
+  "network": {
+    "lhost": "127.0.0.1",
+    "lport": 4444,
+    "auto_detect_ip": true,
+    "preferred_interface": "eth0"
+  },
+  "payloads": {
+    "encoder": "x86/shikata_ga_nai",
+    "iterations": 3,
+    "format": "exe",
+    "platform": "windows",
+    "architecture": "x64",
+    "bad_chars": "\\x00\\x0a\\x0d"
+  },
+  "android": {
+    "target_version": 11,
+    "use_original_cert": false,
+    "zipalign": true,
+    "sign_apk": true
+  },
+  "output": {
+    "directory": "./payloads",
+    "filename_prefix": "iseeu_",
+    "timestamp_suffix": true
+  },
+  "metasploit": {
+    "auto_listener": true,
+    "handler": "exploit/multi/handler",
+    "workspace": "iseeu_default"
+  },
+  "gui": {
+    "theme": "dark",
+    "auto_save_config": true,
+    "show_advanced_options": false
+  },
+  "logging": {
+    "level": "INFO",
+    "file": "./logs/iseeu.log",
+    "max_size": "10MB",
+    "backup_count": 5
+  },
+  "security": {
+    "stealth_mode": false,
+    "randomize_payload": true,
+    "custom_templates": true
+  }
+}

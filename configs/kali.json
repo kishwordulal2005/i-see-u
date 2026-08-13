@@ -1,0 +1,37 @@
+{
+  "network": {
+    "lhost": "auto",
+    "lport": 4444,
+    "auto_detect_ip": true,
+    "preferred_interface": "eth0"
+  },
+  "payloads": {
+    "encoder": "x64/xor_dynamic",
+    "iterations": 5,
+    "format": "elf",
+    "platform": "linux",
+    "architecture": "x64"
+  },
+  "android": {
+    "target_version": 10,
+    "use_original_cert": true,
+    "zipalign": true,
+    "sign_apk": true
+  },
+  "metasploit": {
+    "auto_listener": true,
+    "handler": "exploit/multi/handler",
+    "workspace": "kali_pentest",
+    "database": true
+  },
+  "logging": {
+    "level": "DEBUG",
+    "file": "./logs/kali_debug.log"
+  },
+  "security": {
+    "stealth_mode": true,
+    "randomize_payload": true,
+    "custom_templates": true,
+    "evasion_techniques": ["polymorphic", "encryption"]
+  }
+}
