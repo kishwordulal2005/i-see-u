@@ -296,23 +296,71 @@ clone_repository() {
 install_python_dependencies() {
     log INFO "Installing Python dependencies..."
     
-    if [[ -f requirements.txt ]]; then
-        # Create virtual environment
-        log INFO "Creating Python virtual environment..."
-        python3 -m venv venv
-        source venv/bin/activate
-        
-        # Upgrade pip
-        pip install --upgrade pip setuptools wheel
-        
-        # Install requirements
-        pip install -r requirements.txt
-        
-        log INFO "Python dependencies installed ✓"
-    else
-        log WARN "requirements.txt not found, installing common dependencies..."
-        pip3 install --user colorama requests psutil tkinter
+    # Ensure venv + tkinter system packages are present
+    sudo apt install -y python3-venv python3-tk || log WARN "Could not install python3-venv/python3-tk via apt"
+    
+    # Create virtual environment (with access to system python3-tk for the XP GUI)
+    log INFO "Creating Python virtual environment..."
+    if [[ ! -x "$ISEEU_HOME/venv/bin/python" ]]; then
+        python3 -m venv --system-site-packages "$ISEEU_HOME/venv"
     fi
+    
+    VENV_PYTHON="$ISEEU_HOME/venv/bin/python"
+    VENV_PIP="$ISEEU_HOME/venv/bin/pip"
+    
+    # Upgrade pip
+    log INFO "Upgrading pip..."
+    "$VENV_PIP" install --upgrade pip setuptools wheel
+    
+    # Install runtime + dev requirements into the venv
+    if [[ -f "$ISEEU_HOME/requirements.txt" ]]; then
+        log INFO "Installing requirements.txt into venv..."
+        "$VENV_PIP" install -r "$ISEEU_HOME/requirements.txt"
+    fi
+    
+    # Ensure PySide6 is always present for the modern GUI
+    log INFO "Ensuring PySide6 is installed..."
+    "$VENV_PIP" install PySide6
+    
+    log INFO "Python dependencies installed ✓"
+    log INFO "Use: '$VENV_PYTHON $ISEEU_HOME/iseeu-morden-gui.py' for the modern GUI"
+    log INFO "Use: '$VENV_PYTHON $ISEEU_HOME/isu-xp-eddition.py' for the XP GUI"
+}
+
+# Auto-activate the venv so plain 'python3 <gui>.py' works after login
+enable_venv_activation() {
+    local bashrc="$HOME/.bashrc"
+    local activate_line="source $ISEEU_HOME/venv/bin/activate"
+    
+    if [[ -f "$bashrc" ]] && ! grep -qF "$activate_line" "$bashrc"; then
+        log INFO "Adding venv auto-activation to ~/.bashrc..."
+        echo "" >> "$bashrc"
+        echo "# I See U Toolkit - auto activate venv" >> "$bashrc"
+        echo "$activate_line" >> "$bashrc"
+    fi
+}
+
+# Quick automatic setup: venv + requirements, ready to run both GUIs
+quick_setup() {
+    if [[ -z "$ISEEU_HOME" ]]; then
+        export ISEEU_HOME="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+    fi
+    
+    log INFO "Quick setup in: $ISEEU_HOME"
+    log INFO "Installing python3-venv and python3-tk (may ask for sudo)..."
+    sudo apt update -qq || true
+    sudo apt install -y python3-venv python3-tk || log WARN "apt install failed; GUI may still work"
+    
+    install_python_dependencies
+    enable_venv_activation
+    
+    log INFO "Making scripts executable..."
+    chmod +x "$ISEEU_HOME"/*.py 2>/dev/null || true
+    
+    log INFO "Quick setup complete ✓"
+    log INFO "Now open a NEW terminal (or run: source ~/.bashrc), then just:"
+    log INFO "  python3 iseeu-morden-gui.py    # Modern GUI"
+    log INFO "  python3 isu-xp-eddition.py     # XP GUI"
 }
 
 # Create desktop shortcuts
@@ -347,7 +395,7 @@ Version=1.0
 Type=Application
 Name=I See U Toolkit (Modern GUI)
 Comment=Advanced Payload Generation Tool - Modern Interface
-Exec=python3 '$ISEEU_HOME/iseeu-morden-gui.py'
+Exec=$ISEEU_HOME/venv/bin/python $ISEEU_HOME/iseeu-morden-gui.py
 Icon=applications-security
 Terminal=false
 Categories=Security;Network;
@@ -355,14 +403,14 @@ EOF
     fi
     
     # XP Style GUI shortcut
-    if [[ -f "$ISEEU_HOME/iseeu-xp-version.py" ]]; then
+    if [[ -f "$ISEEU_HOME/isu-xp-eddition.py" ]]; then
         cat > "$desktop_dir/ISeeu-XP-GUI.desktop" << EOF
 [Desktop Entry]
 Version=1.0
 Type=Application
 Name=I See U Toolkit (XP Style)
 Comment=Advanced Payload Generation Tool - XP Style Interface
-Exec=python3 '$ISEEU_HOME/iseeu-xp-version.py'
+Exec=$ISEEU_HOME/venv/bin/python $ISEEU_HOME/isu-xp-eddition.py
 Icon=applications-security
 Terminal=false
 Categories=Security;Network;
@@ -393,8 +441,8 @@ setup_environment() {
         echo "export ISEEU_HOME=\"$ISEEU_HOME\"" >> "$bashrc"
         echo "export PATH=\"\$PATH:\$ISEEU_HOME\"" >> "$bashrc"
         echo "alias iseeu='cd \$ISEEU_HOME && python3 iseeu_toolkit.py'" >> "$bashrc"
-        echo "alias iseeu-modern='cd \$ISEEU_HOME && python3 iseeu-morden-gui.py'" >> "$bashrc"
-        echo "alias iseeu-xp='cd \$ISEEU_HOME && python3 iseeu-xp-version.py'" >> "$bashrc"
+        echo "alias iseeu-modern='cd \$ISEEU_HOME && \$ISEEU_HOME/venv/bin/python iseeu-morden-gui.py'" >> "$bashrc"
+        echo "alias iseeu-xp='cd \$ISEEU_HOME && \$ISEEU_HOME/venv/bin/python isu-xp-eddition.py'" >> "$bashrc"
     fi
     
     # Set Java environment if needed
@@ -575,6 +623,7 @@ full_installation() {
     install_android_tools
     clone_repository
     install_python_dependencies
+    enable_venv_activation
     create_shortcuts
     setup_environment
     post_install_config
@@ -600,6 +649,7 @@ minimal_installation() {
     
     clone_repository
     install_python_dependencies
+    enable_venv_activation
     setup_environment
     post_install_config
     log INFO "Minimal installation completed"
@@ -695,8 +745,8 @@ show_completion_message() {
     echo ""
     echo -e "${WHITE}🚀 Quick Start Commands:${NC}"
     echo -e "   ${CYAN}iseeu${NC}        - Launch CLI version"
-    echo -e "   ${CYAN}iseeu-modern${NC}  - Launch modern GUI"
-    echo -e "   ${CYAN}iseeu-xp${NC}      - Launch XP-style GUI"
+    echo -e "   ${CYAN}iseeu-modern${NC}  - Launch modern GUI (auto venv)"
+    echo -e "   ${CYAN}iseeu-xp${NC}      - Launch XP-style GUI (auto venv)"
     echo ""
     echo -e "${WHITE}📚 Usage Examples:${NC}"
     echo -e "   ${YELLOW}cd \$ISEEU_HOME && python3 iseeu_toolkit.py${NC}"
@@ -726,7 +776,14 @@ main() {
     
     print_banner
     
-    # Check if we should run automated installation
+    # Plain 'bash install.sh' -> automatic quick setup (venv + requirements, both GUIs ready)
+    if [[ "$1" == "" ]] || [[ "$1" == "--quick" ]] || [[ "$1" == "--gui" ]]; then
+        log INFO "Running automatic quick setup (venv + requirements)..."
+        quick_setup
+        exit 0
+    fi
+    
+    # Check if we should run automated full installation
     if [[ "$1" == "--auto" ]] || [[ "$1" == "--full" ]]; then
         log INFO "Running automated full installation..."
         check_root
