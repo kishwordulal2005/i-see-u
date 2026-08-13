@@ -1,8 +1,7 @@
 # I See U Toolkit - Development Requirements
 # Additional dependencies for developers and contributors
 
-# Include all production requirements
--r requirements.txt
+
 
 # Testing Framework
 pytest>=7.1.0
