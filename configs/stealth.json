@@ -1,0 +1,31 @@
+{
+  "payloads": {
+    "encoder": "x86/countdown",
+    "iterations": 10,
+    "custom_encoder": true,
+    "polymorphic": true
+  },
+  "android": {
+    "target_version": 10,
+    "inject_method": "smali",
+    "permission_minimal": true,
+    "obfuscate_manifest": true
+  },
+  "evasion": {
+    "anti_vm": true,
+    "anti_debug": true,
+    "sleep_timer": 30,
+    "process_injection": true
+  },
+  "network": {
+    "domain_fronting": false,
+    "https_only": true,
+    "user_agent_spoofing": true
+  },
+  "security": {
+    "stealth_mode": true,
+    "randomize_payload": true,
+    "encrypt_strings": true,
+    "strip_debug_info": true
+  }
+}
